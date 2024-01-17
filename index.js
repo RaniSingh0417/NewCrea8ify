@@ -6,6 +6,7 @@ app.use(cookies());
 const { connectDatabase } = require("./connection/file");
 const generateToken = require("./tokens/generateToken");
 const verifyToken = require("./tokens/verifyToken");
+const signupModel = require("./models/signup");
 
 // Public Api
 app.get("/public", (req, res) => {
@@ -16,15 +17,64 @@ app.get("/public", (req, res) => {
   }
 });
 
+// Signup
+
+app.post("/signup", async (req, res) => {
+  try {
+    let countuser = await signupModel
+      .find({ username: req.body.username_ })
+      .countDocuments();
+    let countemail = await signupModel
+      .find({ email: req.body.email_ })
+      .countDocuments();
+    if (countuser < 1) {
+      if (/^\w+([\.-]?\w+)@\w+([\.-]?\w+)(\.\w{2,3})+$/.test(req.body.email_)) {
+        if (countemail < 1) {
+          const signup = {
+            username: req.body.username_,
+            email: req.body.email_,
+            password: req.body.password_,
+          };
+          const signupdata = new signupModel(signup);
+          await signupdata.save();
+          return res.json({ success: true, message: "you are signed up" });
+        } else {
+          return res.json({
+            success: false,
+            message: "Pls use a new email-id",
+          });
+        }
+      } else {
+        return res
+          .status(400)
+          .json({ success: false, message: "pls enter a valid emailid" });
+      }
+    } else {
+      return res
+        .status(400)
+        .json({ success: false, message: "this username already exists" });
+    }
+  } catch (error) {
+    return res.status(400).json({ success: false, error: error.message });
+  }
+});
+
 // Login Api
-app.post("/login", (req, res) => {
+
+app.post("/login", async (req, res) => {
   try {
     // const currDate = new Date();
     // const newDate = new Date(currDate.setDate(currDate.getDate() + 1));
     // console.log(newDate);
-    const userid = req.body.userid;
-    if ((req.body.password = "database password")) {
-      const token = generateToken(userid);
+    const email_ = req.body.email_;
+    const userdata = await signupModel.findOne({ email: email_ });
+    const password = userdata.password;
+    // console.log(userdata);
+    console.log(userdata.password);
+
+    // verifying password
+    if (req.body.password_ === password) {
+      const token = generateToken(email_);
       console.log(token);
       res.cookie("web_tk", token); //setting cookie
       return res.json({ success: true, message: "Hello cookie generated" });
