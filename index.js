@@ -6,7 +6,9 @@ app.use(cookies());
 const { connectDatabase } = require("./connection/file");
 const generateToken = require("./tokens/generateToken");
 const verifyToken = require("./tokens/verifyToken");
+const { encryptPassword, verifyPassword } = require("./functions/encryption");
 const signupModel = require("./models/signup");
+const { sendLoginOtp } = require("./functions/otp");
 
 // Public Api
 app.get("/public", (req, res) => {
@@ -21,38 +23,33 @@ app.get("/public", (req, res) => {
 
 app.post("/signup", async (req, res) => {
   try {
-    let countuser = await signupModel
-      .find({ username: req.body.username_ })
-      .countDocuments();
-    let countemail = await signupModel
-      .find({ email: req.body.email_ })
-      .countDocuments();
-    if (countuser < 1) {
-      if (/^\w+([\.-]?\w+)@\w+([\.-]?\w+)(\.\w{2,3})+$/.test(req.body.email_)) {
-        if (countemail < 1) {
-          const signup = {
-            username: req.body.username_,
-            email: req.body.email_,
-            password: req.body.password_,
-          };
-          const signupdata = new signupModel(signup);
-          await signupdata.save();
-          return res.json({ success: true, message: "you are signed up" });
-        } else {
-          return res.json({
-            success: false,
-            message: "Pls use a new email-id",
-          });
-        }
-      } else {
-        return res
-          .status(400)
-          .json({ success: false, message: "pls enter a valid emailid" });
-      }
+    let checkusername = await signupModel.findOne({
+      username: req.body.username_,
+    });
+    if (checkusername) {
+      return res.json({ success: true, message: "Username already exist" });
+    }
+    let checkemail = await signupModel.findOne({
+      email: req.body.email_.toLowerCase(),
+    });
+    if (checkemail) {
+      return res.json({ success: true, message: "Email already exist" });
+    }
+
+    if (/^\w+([\.-]?\w+)@\w+([\.-]?\w+)(\.\w{2,3})+$/.test(req.body.email_)) {
+      const signup = {
+        username: req.body.username_,
+        email: req.body.email_,
+        password: await encryptPassword(req.body.password_),
+        mobileno: req.body.mobileno_,
+      };
+      const signupdata = new signupModel(signup);
+      await signupdata.save();
+      return res.json({ success: true, message: "you are signed up" });
     } else {
       return res
         .status(400)
-        .json({ success: false, message: "this username already exists" });
+        .json({ success: false, message: "pls enter a valid emailid" });
     }
   } catch (error) {
     return res.status(400).json({ success: false, error: error.message });
@@ -68,16 +65,23 @@ app.post("/login", async (req, res) => {
     // console.log(newDate);
     const email_ = req.body.email_;
     const userdata = await signupModel.findOne({ email: email_ });
-    const password = userdata.password;
-    // console.log(userdata);
-    console.log(userdata.password);
 
+    if (!userdata) {
+      return res
+        .status(400)
+        .json({ success: "false", message: "Pls signup first" });
+    }
     // verifying password
-    if (req.body.password_ === password) {
-      const token = generateToken(email_);
+
+    const encryptedPassword = userdata.password;
+    const inputPassword = req.body.password_;
+
+    if (verifyPassword(inputPassword, encryptedPassword)) {
+      sendLoginOtp(`+91${userdata.mobileno}`);
+      const token = generateToken(userdata._id);
       console.log(token);
       res.cookie("web_tk", token); //setting cookie
-      return res.json({ success: true, message: "Hello cookie generated" });
+      return res.json({ success: true, message: "Logged in Successfully" });
     } else {
       return res
         .status(400)
