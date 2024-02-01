@@ -8,7 +8,7 @@ const generateToken = require("./tokens/generateToken");
 const verifyToken = require("./tokens/verifyToken");
 const { encryptPassword, verifyPassword } = require("./functions/encryption");
 const signupModel = require("./models/signup");
-const { sendLoginOtp } = require("./functions/otp");
+const { sendLoginOtp, verifyOtp } = require("./functions/otp");
 
 // Public Api
 app.get("/public", (req, res) => {
@@ -78,10 +78,8 @@ app.post("/login", async (req, res) => {
 
     if (verifyPassword(inputPassword, encryptedPassword)) {
       sendLoginOtp(`+91${userdata.mobileno}`);
-      const token = generateToken(userdata._id);
-      console.log(token);
-      res.cookie("web_tk", token); //setting cookie
-      return res.json({ success: true, message: "Logged in Successfully" });
+
+      return res.json({ success: true, message: "OTP sent succesfully" });
     } else {
       return res
         .status(400)
@@ -92,11 +90,41 @@ app.post("/login", async (req, res) => {
   }
 });
 
+app.post("/mfauth", async (req, res) => {
+  try {
+    const email_ = req.body.email_;
+    const userdata = await signupModel.findOne({ email: email_ });
+    if (!userdata) {
+      return res.json({
+        success: false,
+        message: "User not found ,please signup first",
+      });
+    }
+    const inputPassword = req.body.password_;
+    const otp = req.body.otp;
+    const encryptedPassword = userdata.password;
+    if (
+      (await verifyPassword(inputPassword, encryptedPassword)) &&
+      (await verifyOtp(`+91${userdata.mobileno}`, otp))
+    ) {
+      const token = generateToken(userdata._id);
+      res.cookie("auth_tk", token);
+      return res.json({ success: true, message: "Logged in successfully" });
+    } else {
+      return res
+        .status(400)
+        .json({ success: false, message: "Incorrect credentials" });
+    }
+  } catch (error) {
+    return res.status(400).json({ success: false, error: error.message });
+  }
+});
+
 // Middleware Function
 
 const testMiddlewareFunction = (req, res, next) => {
   // console.log(req.cookies.web_tk);
-  if (verifyToken(req.cookies.web_tk)) {
+  if (verifyToken(req.cookies.auth_tk)) {
     const userinfo = verifyToken(req.cookies.web_tk);
     console.log("Hi this is middleware function");
     console.log(userinfo);
