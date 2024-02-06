@@ -135,7 +135,7 @@ const checkIfUserLoggedIn = (req, res, next) => {
   // console.log(req.cookies.web_tk);
   if (verifyToken(req.cookies.auth_tk)) {
     const userinfo = verifyToken(req.cookies.auth_tk);
-    // console.log(req);
+    console.log(userinfo);
     req.userid = userinfo.id;
     console.log("Hi this is middleware function");
     console.log(userinfo);
@@ -144,9 +144,28 @@ const checkIfUserLoggedIn = (req, res, next) => {
   } else {
     return res
       .status(400)
-      .json({ success: false, message: "Authentication Failed" });
+      .json({ success: false, error: "Authentication Failed" });
   }
 };
+
+app.get("/currentuser", checkIfUserLoggedIn, async (req, res) => {
+  try {
+    const userid = req.userid;
+    const userdetails = await signupModel.findOne(
+      { _id: userid },
+      { email: 1, username: 1, dob: 1, mobileno: 1, isUnder18: 1, createdAt: 1 }
+    );
+    console.log(userdetails);
+    if (userdetails) {
+      return res.json({ success: true, data: userdetails });
+    } else {
+      return res.status(400).json({ success: false, error: "User not found" });
+    }
+  } catch (error) {
+    console.log(error);
+    return res.status(400).json({ success: false, error: error.message });
+  }
+});
 
 // View profile (Secure Api/Private Api)
 app.get("/profile", checkIfUserLoggedIn, (req, res) => {
@@ -188,23 +207,7 @@ app.get("/following", checkIfUserLoggedIn, (req, res) => {
   }
 });
 
-app.get("/currentuser", checkIfUserLoggedIn, async (req, res) => {
-  try {
-    const userid = req.userid;
-    const userdetails = await signupModel.findOne(
-      { _id: userid },
-      { email: 1, username: 1, dob: 1, mobileno: 1, isUnder18: 1, createdAt: 1 }
-    );
-    if (userdetails) {
-      return res.json({ success: true, data: userdetails });
-    } else {
-      return res.status(400).json({ success: false, error: "User not found" });
-    }
-  } catch (error) {
-    console.log(error);
-    return res.status(400).json({ success: false, error: error.message });
-  }
-});
+
 app.get("/logout", checkIfUserLoggedIn, (req, res) => {
   try {
     res.clearCookie("auth_tk");
