@@ -111,12 +111,9 @@ app.post("/mfauth", async (req, res) => {
       });
     }
     const inputPassword = req.body.password_;
-    const otp = req.body.otp;
+    // const otp = req.body.otp;
     const encryptedPassword = userdata.password;
-    if (
-      (await verifyPassword(inputPassword, encryptedPassword)) &&
-      (await verifyOtp(`+91${userdata.mobileno}`, otp))
-    ) {
+    if (await verifyPassword(inputPassword, encryptedPassword)) {
       const token = generateToken(userdata._id);
       res.cookie("auth_tk", token);
       return res.json({ success: true, message: "Logged in successfully" });
