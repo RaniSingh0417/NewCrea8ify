@@ -9,7 +9,7 @@ const verifyToken = require("./tokens/verifyToken");
 const { encryptPassword, verifyPassword } = require("./functions/encryption");
 const signupModel = require("./models/signup");
 const path = require("path");
-const { sendLoginOtp, verifyOtp } = require("./functions/otp");
+// const { sendLoginOtp, verifyOtp } = require("./functions/otp");
 
 // Public Api
 app.get("/public", (req, res) => {
