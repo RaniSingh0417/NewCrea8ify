@@ -8,6 +8,7 @@ const generateToken = require("./tokens/generateToken");
 const verifyToken = require("./tokens/verifyToken");
 const { encryptPassword, verifyPassword } = require("./functions/encryption");
 const signupModel = require("./models/signup");
+const path = require("path");
 const { sendLoginOtp, verifyOtp } = require("./functions/otp");
 
 // Public Api
@@ -207,7 +208,6 @@ app.get("/following", checkIfUserLoggedIn, (req, res) => {
   }
 });
 
-
 app.get("/logout", checkIfUserLoggedIn, (req, res) => {
   try {
     res.clearCookie("auth_tk");
@@ -218,9 +218,21 @@ app.get("/logout", checkIfUserLoggedIn, (req, res) => {
   }
 });
 
-const PORT = 5000;
+// const PORT = 6000;
 connectDatabase();
+const PORT = process.env.PORT || 6000;
 
-app.listen(PORT, () => {
-  console.log(`Server is running at ${PORT}`);
+app.use(express.static("client/build"));
+app.get("*", (req, res) => {
+  res.sendFile(
+    path.resolve(__dirname + "/client/build/index.html"),
+    function (err) {
+      if (err) {
+        console.log(err);
+      }
+    }
+  );
+});
+app.listen(PORT, async () => {
+  await console.log(`Server is running at port ${PORT}`);
 });
