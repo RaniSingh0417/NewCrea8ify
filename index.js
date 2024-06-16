@@ -1,14 +1,16 @@
 const express = require("express");
 const app = express();
-app.use(express.json());
+require("dotenv").config();
 const cookies = require("cookie-parser");
-app.use(cookies());
+
 const { connectDatabase } = require("./connection/file");
 const generateToken = require("./tokens/generateToken");
 const verifyToken = require("./tokens/verifyToken");
 const { encryptPassword, verifyPassword } = require("./functions/encryption");
 const signupModel = require("./models/signup");
 const path = require("path");
+app.use(express.json());
+app.use(cookies());
 // const { sendLoginOtp, verifyOtp } = require("./functions/otp");
 
 // Public Api
@@ -217,7 +219,6 @@ app.get("/logout", checkIfUserLoggedIn, (req, res) => {
 
 // const PORT = 6000;
 connectDatabase();
-const PORT = process.env.PORT || 6000;
 
 app.use(express.static("client/build"));
 app.get("*", (req, res) => {
@@ -230,6 +231,7 @@ app.get("*", (req, res) => {
     }
   );
 });
-app.listen(PORT, async () => {
-  await console.log(`Server is running at port ${PORT}`);
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`Server is running at port ${PORT}`);
 });
